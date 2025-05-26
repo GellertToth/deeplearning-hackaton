@@ -142,7 +142,7 @@ def main(args):
 
 
     # Define checkpoint path relative to the script's directory
-    checkpoint_path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_best.pth")
+    checkpoint_path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_{args.model_id}_best.pth")
     checkpoints_folder = os.path.join(script_dir, "checkpoints", test_dir_name)
     os.makedirs(checkpoints_folder, exist_ok=True)
 
@@ -173,7 +173,7 @@ def main(args):
                 lr = initial_lr + (target_lr - initial_lr) * (epoch / warmup_epochs)
             else:
                 scheduler.step()
-                lr = scheduler.get_last_lr()
+                lr = scheduler.get_last_lr()[-1]
             return lr
             
 
@@ -189,7 +189,7 @@ def main(args):
             train_loss = train(
                 train_loader, model, optimizer, device,
                 save_checkpoints=(epoch + 1 in checkpoint_intervals),
-                checkpoint_path=os.path.join(checkpoints_folder, f"model_{test_dir_name}"),
+                checkpoint_path=os.path.join(checkpoints_folder, f"model_{test_dir_name}_{args.model_id}"),
                 current_epoch=epoch
             )
             train_acc, _ = evaluate(train_loader, model, device, calculate_accuracy=True)
@@ -222,6 +222,8 @@ if __name__ == "__main__":
     parser.add_argument("--test_path", type=str, help="Path to the test dataset.")
     parser.add_argument("--pretrained_path", type=str, help="Path to the pretrained model.")
     parser.add_argument("--pretraining", type=bool, help="Pretrain or finetune", default=False)
+    parser.add_argument("--model_id", type=str, help="Model id to enable training more than one mode", default="model0")
+
 
 
     args = parser.parse_args()
