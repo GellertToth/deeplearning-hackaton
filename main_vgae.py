@@ -246,8 +246,9 @@ def main(args):
 
     if not args.test_path is None:
         print("Predicting")
-        train_dataset = GraphDataset(args.train_path, transform=add_zeros)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        _, val_graphs = load_data(args.train_path, round=0, n_folds=1, train_folds_to_use=1, test_size=0.2)
+        val_dataset = PreloadedGraphDataset(val_graphs, transform=add_zeros)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
         model_paths = args.models.split(" ")
         models = []
@@ -257,7 +258,7 @@ def main(args):
             model.load_state_dict(torch.load(path))
             models.append(model)
 
-            acc, _ = evaluate(train_loader, model, device, calculate_accuracy=True)
+            acc, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
             weights.append(acc)
         acc = torch.tensor(weights)
         weights = acc / acc.sum()
