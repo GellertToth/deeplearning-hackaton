@@ -46,35 +46,45 @@ import torch
 from torch_geometric.data import Dataset, Data
 from torch_geometric.loader import DataLoader
 import numpy as np
+from sklearn.model_selection import KFold, train_test_split
 
-class GraphDatasetDownsample(Dataset):
-    def __init__(self, train_path, round, subset_ratio=0.6, transform=None, pre_transform=None, seed=42):
-        self.files = train_path.split(" ")
-        self.round = round
-        self.subset_ratio = subset_ratio
-        np.random.seed(seed)
-        self.num_graphs, self.graphs_dicts = self._count_graphs() 
+
+def load_data(files, round, n_folds, train_folds_to_use, test_size=0.2, seed=42):
+    files = files.split(" ")
+    train_graphs, val_graphs = [], []
+    for file in files:
+        with gzip.open(file, "rt", encoding="utf-8") as f:
+            graphs = json.load(f)
+            train_indices, val_indices = train_test_split(
+                np.arange(len(graphs)), test_size=test_size, random_state=seed, shuffle=True
+            )
+            
+            train_set = [graphs[i] for i in train_indices]
+            val_set = [graphs[i] for i in val_indices]
+
+            kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
+            folds = list(kf.split(train_set))
+            
+            selected_folds = [(round + i) % n_folds for i in range(train_folds_to_use)]
+            train_indices = np.concatenate([folds[i][0] for i in selected_folds])
+            train_set = [train_set[i] for i in train_indices]
+
+            train_graphs.extend(train_set)
+            val_graphs.extend(val_set)
+    return train_set, val_set
+
+class PreloadedGraphDataset(Dataset):
+    def __init__(self, graphs, transform=None, pre_transform=None, seed=42):
+        self.num_graphs, self.graphs_dicts = len(graphs), graphs 
         super().__init__(None, transform, pre_transform)
+        np.random.seed(seed)
 
     def len(self):
         return self.num_graphs  
     
     def get(self, idx):
         return dictToGraphObject(self.graphs_dicts[idx])
-    
-    def _count_graphs(self):
-        graphs_dicts = []
-        for file in self.files:
-            with gzip.open(file, "rt", encoding="utf-8") as f:
-                graphs = json.load(f) 
-                indices = np.random.permutation(len(graphs))
-                leave_out = int(len(graphs) * (1-self.subset_ratio))
-                start, end = leave_out * self.round, leave_out * self.round + int(len(graphs) * self.subset_ratio)
-                keep = [i%len(graphs) for i in range(start, end)]
-                print(len(keep), len(graphs), start, end)
-                graphs = [graphs[indices[i]] for i in keep]
-                graphs_dicts.extend(graphs)
-        return len(graphs_dicts),graphs_dicts 
+
 
 class GraphDataset(Dataset):
     def __init__(self, train_path, transform=None, pre_transform=None):

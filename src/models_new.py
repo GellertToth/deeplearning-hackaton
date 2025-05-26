@@ -59,9 +59,9 @@ class VGAE(nn.Module):
         graph_emb = global_mean_pool(z, batch)
         class_logits= self.classifier(graph_emb)
         return z, mu, logvar, class_logits
-    4
-    def loss(self, z, mu, logvar, class_logits, data, alpha=1, beta=0.1, gamma=0.5, delta=0.3):
-        classification_loss = F.cross_entropy(class_logits, data.y)
+    
+    def loss(self, z, mu, logvar, class_logits, data, alpha=1, beta=0.1, gamma=0.5, delta=0.3, weights=None):
+        classification_loss = F.cross_entropy(class_logits, data.y, weight=None)
 
         adj_pred, edge_attr_pred = self.decode(z, data.edge_index)
         adj_true = torch.zeros_like(adj_pred)
