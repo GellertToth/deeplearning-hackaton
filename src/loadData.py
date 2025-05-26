@@ -58,20 +58,19 @@ def load_data(files, round, n_folds, train_folds_to_use, test_size=0.2, seed=42)
             train_indices, val_indices = train_test_split(
                 np.arange(len(graphs)), test_size=test_size, random_state=seed, shuffle=True
             )
-            
-            train_set = [graphs[i] for i in train_indices]
             val_set = [graphs[i] for i in val_indices]
-
-            kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
-            folds = list(kf.split(train_set))
-            
+            chunk_sizes = [(len(train_indices) + i) // n_folds for i in range(n_folds)]
+            folds = []
+            start = 0
+            for size in chunk_sizes:
+                folds.append(train_indices[start:start + size])
+                start += size
             selected_folds = [(round + i) % n_folds for i in range(train_folds_to_use)]
-            train_indices = np.concatenate([folds[i][0] for i in selected_folds])
-            train_set = [train_set[i] for i in train_indices]
-
+            train_indices = np.concatenate([folds[i] for i in selected_folds])
+            train_set = [graphs[i] for i in train_indices]
             train_graphs.extend(train_set)
             val_graphs.extend(val_set)
-    return train_set, val_set
+    return train_graphs, val_graphs
 
 class PreloadedGraphDataset(Dataset):
     def __init__(self, graphs, transform=None, pre_transform=None, seed=42):
