@@ -118,7 +118,7 @@ def main(args):
     minimum_lr = 1e-6
     
     num_epochs = 100
-    batch_size = 32
+    batch_size = 64
     num_checkpoints = 5
 
     device = "cuda:0"
