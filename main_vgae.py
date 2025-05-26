@@ -183,7 +183,7 @@ def main(args):
                 param_group['lr'] = lr
             print(f"Current learning rate: {lr}")
 
-            if args.pretraining and epoch % 10 == 0 and epoch != 0:
+            if args.pretraining and epoch % 10 == 0 and epoch != 0 and args.subset_ratio != 1:
                 train_dataset = GraphDatasetDownsample(args.train_path, transform=add_zeros, subset_ratio=args.subset_ratio, round=epoch//10)
                 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
             train_loss = train(
