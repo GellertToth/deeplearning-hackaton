@@ -7,7 +7,7 @@ MODEL_ID="$1"
 # Pretraining
 python3 main_vgae.py --train_path "./datasets/A/train.json.gz ./datasets/D/train.json.gz ./datasets/C/train.json.gz ./datasets/B/train.json.gz" \
     --pretraining=True --model_id "$MODEL_ID" \
-    --n_folds 5 --train_folds_to_use 2
+    --n_folds 8 --train_folds_to_use 5
 
 # Finetuning / Inference
 for dataset in A B C D; do
