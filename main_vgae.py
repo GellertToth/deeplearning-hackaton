@@ -152,7 +152,7 @@ def main(args):
 
     if args.train_path:
         if args.pretraining:
-            train_dataset = GraphDatasetDownsample(args.train_path, transform=add_zeros, subset_ratio=0.4, round=0)
+            train_dataset = GraphDatasetDownsample(args.train_path, transform=add_zeros, subset_ratio=args.subset_ratio, round=0)
         else:
             train_dataset = GraphDataset(args.train_path, transform=add_zeros)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -184,7 +184,7 @@ def main(args):
             print(f"Current learning rate: {lr}")
 
             if args.pretraining and epoch % 10 == 0 and epoch != 0:
-                train_dataset = GraphDatasetDownsample(args.train_path, transform=add_zeros, subset_ratio=0.4, round=epoch//10)
+                train_dataset = GraphDatasetDownsample(args.train_path, transform=add_zeros, subset_ratio=args.subset_ratio, round=epoch//10)
                 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
             train_loss = train(
                 train_loader, model, optimizer, device,
@@ -223,6 +223,8 @@ if __name__ == "__main__":
     parser.add_argument("--pretrained_path", type=str, help="Path to the pretrained model.")
     parser.add_argument("--pretraining", type=bool, help="Pretrain or finetune", default=False)
     parser.add_argument("--model_id", type=str, help="Model id to enable training more than one mode", default="model0")
+    parser.add_argument("--subset_ratio", type=float, help="Percentage of data to load when pretraining", default=0.4)
+
 
 
 
