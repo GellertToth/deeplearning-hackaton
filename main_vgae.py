@@ -142,7 +142,7 @@ def main(args):
 
 
     # Define checkpoint path relative to the script's directory
-    checkpoint_path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_{args.model_id}_best.pth")
+    checkpoint_path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_{args.    }_best.pth")
     checkpoints_folder = os.path.join(script_dir, "checkpoints", test_dir_name)
     os.makedirs(checkpoints_folder, exist_ok=True)
 
