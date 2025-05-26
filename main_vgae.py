@@ -145,7 +145,7 @@ def main(args):
     target_lr = 2.5 * 1e-4
     minimum_lr = 1e-6
     
-    num_epochs = 100
+    num_epochs = 70
     batch_size = 32
     num_checkpoints = 5
 
@@ -229,7 +229,6 @@ def main(args):
             )
             train_acc, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
             print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
-            
             # Save logs for training progress
             train_losses.append(train_loss)
             train_accuracies.append(train_acc)
