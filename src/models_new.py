@@ -74,7 +74,7 @@ class VGAE(nn.Module):
         return loss.mean()
 
     def loss(self, z, mu, logvar, class_logits, data, alpha=1, beta=0.1, gamma=0.5, delta=0.3, weights=None):
-        classification_loss = self.gce_loss(class_logits, data.y, weight=weights)
+        classification_loss = self.gce_loss(class_logits, data.y, weights=weights)
 
         adj_pred, edge_attr_pred = self.decode(z, data.edge_index)
         adj_true = torch.zeros_like(adj_pred)
