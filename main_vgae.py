@@ -140,6 +140,45 @@ def plot_training_progress(train_losses, train_accuracies, output_dir, model_id)
     plt.savefig(os.path.join(output_dir, f"training_progress_{model_id}.png"))
     plt.close()
 
+class ModelWithTemperature(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+        self.temperature = nn.Parameter(torch.ones(1) * 1.0)
+        self.T = 1
+
+    def forward(self, input):
+        z, mu, logvar, logits = self.model(input)
+        return z, mu, logvar, logits / self.T
+
+    def set_temperature(self, data_loader, device):
+        print(f"Setting temperature")
+        self.eval()
+        predictions, true_labels = [], []
+        with torch.no_grad():
+            for data in tqdm(data_loader, desc="Iterating eval graphs", unit="batch"):
+                    data = data.to(device)
+                    _, _, _, logits = self.model(data)
+                    predictions.append(logits.cpu())
+                    true_labels.append(data.y.cpu())
+
+        logits = torch.cat(predictions)
+        labels = torch.cat(true_labels)
+
+        nll_criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.LBFGS([self.temperature], lr=0.01, max_iter=50)
+
+        def closure():
+            optimizer.zero_grad()
+            loss = nll_criterion(logits / self.temperature, labels)
+            loss.backward()
+            return loss
+
+        optimizer.step(closure)
+        self.T = self.temperature.item()
+        print(f"Optimal temperature: {self.temperature.item()}")
+
+
 def main(args):
     print(string_to_int(args.model_id))
     set_seed(string_to_int(args.model_id))
@@ -254,19 +293,27 @@ def main(args):
         _, val_graphs = load_data(args.train_path, round=0, n_folds=1, train_folds_to_use=1, test_size=0.2)
         val_dataset = PreloadedGraphDataset(val_graphs, transform=add_zeros)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
-
+        
         model_paths = args.models.split(" ")
         models = []
         weights = []
+        temps = []
         for path in model_paths:
+            print(f"Loading model from {path}")
             model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=hidden_dim, latent_dim=emb_dim, num_classes=6).to(device)
             model.load_state_dict(torch.load(path))
-            models.append(model)
 
             _, f1, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
+            model = ModelWithTemperature(model)
+            model.set_temperature(val_loader, device)
+
             weights.append(f1)
+            models.append(model)
+            temps.append(model.temperature.item())
+
         weights = torch.tensor(weights)
         weights = weights / weights.sum()
+        print(f"Temperatures were set to {temps}")
         print(f"Model weights according to training accuracy {weights}")
         test_dataset = GraphDataset(args.test_path, transform=add_zeros)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)

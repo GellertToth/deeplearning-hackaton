@@ -60,8 +60,21 @@ class VGAE(nn.Module):
         class_logits= self.classifier(graph_emb)
         return z, mu, logvar, class_logits
     
+
+    def gce_loss(self, logits, targets, q=0.6, weights=None):
+        probs = F.softmax(logits, dim=1)
+        targets_one_hot = F.one_hot(targets, num_classes=6).float()
+        pt = (probs * targets_one_hot).sum(dim=1)
+        loss = (1 - pt ** q) / q
+
+        if not weights is None:
+            weights = weights[targets]
+            loss = loss * weights
+        
+        return loss.mean()
+
     def loss(self, z, mu, logvar, class_logits, data, alpha=1, beta=0.1, gamma=0.5, delta=0.3, weights=None):
-        classification_loss = F.cross_entropy(class_logits, data.y, weight=None)
+        classification_loss = self.gce_loss(class_logits, data.y, weight=weights)
 
         adj_pred, edge_attr_pred = self.decode(z, data.edge_index)
         adj_true = torch.zeros_like(adj_pred)
