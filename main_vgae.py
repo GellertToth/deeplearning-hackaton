@@ -14,7 +14,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 import hashlib
 
 def string_to_int(s):
-    return int(hashlib.md5(s.encode()).hexdigest(), 16)
+    return int(hashlib.md5(s.encode()).hexdigest(), 16) % (1_000_000_007)
 
 def add_zeros(data):
     data.x = torch.zeros(data.num_nodes, dtype=torch.long)
@@ -137,6 +137,7 @@ def plot_training_progress(train_losses, train_accuracies, output_dir):
     plt.close()
 
 def main(args):
+    print(string_to_int(args.model_id))
     set_seed(string_to_int(args.model_id))
     script_dir = os.path.dirname(os.path.abspath(__file__))
     hidden_dim = 128
