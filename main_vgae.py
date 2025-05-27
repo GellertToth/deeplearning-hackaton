@@ -26,7 +26,7 @@ import torch.nn.functional as F
 # {0: 0.12101063829787234,  1: 0.17039007092198583, 2: 0.2931737588652482, 3: 0.17553191489361702, 4: 0.17411347517730497, 5: 0.06578014184397163}
 class_probs = torch.tensor([0.13, 0.17, 0.3, 0.17, 0.18, 0.05])
 inv_freq = 1.0 / class_probs
-# weights = inv_freq / inv_freq.sum()
+weights = inv_freq / inv_freq.sum()
 
 def train(data_loader, model, optimizer, device, save_checkpoints, checkpoint_path, current_epoch):
     model.train()
@@ -35,7 +35,7 @@ def train(data_loader, model, optimizer, device, save_checkpoints, checkpoint_pa
         data = data.to(device)
         optimizer.zero_grad()
         z, mu, logvar, class_logits = model(data)
-        loss = model.loss(z, mu, logvar, class_logits, data)
+        loss = model.loss(z, mu, logvar, class_logits, data, weights=weights)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
