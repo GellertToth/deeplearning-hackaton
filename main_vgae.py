@@ -12,10 +12,6 @@ import torch.nn as nn
 from src.models_new import VGAE
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-
-# Set the random seed
-set_seed()
-
 def add_zeros(data):
     data.x = torch.zeros(data.num_nodes, dtype=torch.long)
     return data
@@ -137,6 +133,7 @@ def plot_training_progress(train_losses, train_accuracies, output_dir):
     plt.close()
 
 def main(args):
+    set_seed(args.model_id)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     hidden_dim = 128
     emb_dim = 16
