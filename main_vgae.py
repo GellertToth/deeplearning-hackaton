@@ -12,6 +12,7 @@ import torch.nn as nn
 from src.models_new import VGAE
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import hashlib
+from sklearn.metrics import f1_score
 
 def string_to_int(s):
     return int(hashlib.md5(s.encode()).hexdigest(), 16) % (1_000_000_007)
@@ -51,7 +52,7 @@ def evaluate(data_loader, model, device, calculate_accuracy=False):
     model.eval()
     correct = 0
     total = 0
-    predictions = []
+    predictions, true_labels = [], []
     p_dist=torch.zeros((6, ))
     with torch.no_grad():
         for data in tqdm(data_loader, desc="Iterating eval graphs", unit="batch"):
@@ -60,13 +61,16 @@ def evaluate(data_loader, model, device, calculate_accuracy=False):
             pred = output.argmax(dim=1)
             p_dist += F.one_hot(pred, num_classes=6).float().cpu().mean(dim=0)
             predictions.extend(pred.cpu().numpy())
+            true_labels.extend(data.y.cpu().numpy())
             if calculate_accuracy:
                 correct += (pred == data.y).sum().item()
                 total += data.y.size(0)
+    f1 = f1_score(true_labels, predictions, average='weighted')  
+    
     print(f"Pred distribution: {(p_dist / len(data_loader)).tolist()}")
     if calculate_accuracy:
         accuracy = correct / total
-        return accuracy, predictions
+        return accuracy, f1, predictions
     return predictions
 
 def evaluate_models(data_loader, models, weights, device, calculate_accuracy=False):
@@ -192,7 +196,7 @@ def main(args):
 
 
         # Training loop
-        best_accuracy = 0.0
+        best_f1 = 0.0
         train_losses = []
         train_accuracies = []
 
@@ -210,7 +214,7 @@ def main(args):
                 lr = scheduler.get_last_lr()[-1]
             return lr
             
-
+        
         for epoch in range(num_epochs):
             lr = get_lr(epoch)
             for param_group in optimizer.param_groups:
@@ -229,16 +233,16 @@ def main(args):
                 checkpoint_path=os.path.join(checkpoints_folder, f"model_{test_dir_name}_{args.model_id}"),
                 current_epoch=epoch
             )
-            train_acc, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
-            print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
+            train_acc, f1, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
+            print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Val Acc: {train_acc:.4f}, Val f1: {f1:.4f}")
             # Save logs for training progress
             train_losses.append(train_loss)
             train_accuracies.append(train_acc)
-            logging.info(f"Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
+            logging.info(f"Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Val Acc: {train_acc:.4f}, Val f1: {f1:.4f}")
 
             # Save best model
-            if train_acc > best_accuracy:
-                best_accuracy = train_acc
+            if f1 > best_f1:
+                best_f1 = f1
                 torch.save(model.state_dict(), checkpoint_path)
                 print(f"Best model updated and saved at {checkpoint_path}")
 
@@ -259,10 +263,10 @@ def main(args):
             model.load_state_dict(torch.load(path))
             models.append(model)
 
-            acc, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
-            weights.append(acc)
-        acc = torch.tensor(weights)
-        weights = acc / acc.sum()
+            _, f1, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
+            weights.append(f1)
+        weights = torch.tensor(weights)
+        weights = weights / weights.sum()
         print(f"Model weights according to training accuracy {weights}")
         test_dataset = GraphDataset(args.test_path, transform=add_zeros)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
