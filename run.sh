@@ -13,7 +13,6 @@ python3 main_vgae.py --train_path "./datasets/A/train.json.gz ./datasets/D/train
 for dataset in A B C D; do
     python3 main_vgae.py \
         --train_path "./datasets/$dataset/train.json.gz" \
-        --test_path "./datasets/$dataset/test.json.gz" \
         --pretrained_path "./checkpoints/model_pretraining_${MODEL_ID}_best.pth" \
         --model_id "$MODEL_ID"
 done
