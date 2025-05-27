@@ -161,7 +161,7 @@ def main(args):
     if args.pretraining:
         test_dir_name = "pretraining"
     else:
-        test_dir_name = os.path.basename(os.path.dirname(args.train_path))
+        test_dir_name = os.path.basename(os.path.dirname(args.train_path if (not args.train_path is None) else args.test_path))
     
     # Setup logging
     logs_folder = os.path.join(script_dir, "logs", test_dir_name)
