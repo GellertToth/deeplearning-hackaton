@@ -152,7 +152,7 @@ def main(args):
     minimum_lr = 1e-6
     
     num_epochs = 70
-    batch_size = 32
+    batch_size = args.batch_size
     num_checkpoints = 5
 
     device = f"cuda:{args.device}"
@@ -285,6 +285,8 @@ if __name__ == "__main__":
     parser.add_argument("--train_folds_to_use", type=int, help="Train folds to use together", default=1)
     parser.add_argument("--models", type=str, help="Models to use for prediction")
     parser.add_argument("--device", type=int, default=0, help="GPU device to use")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
+
     args = parser.parse_args()
     main(args)
 
