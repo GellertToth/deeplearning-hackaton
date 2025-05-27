@@ -112,7 +112,7 @@ def save_predictions(predictions, test_path):
     print(f"Predictions saved to {output_csv_path}")
 
 
-def plot_training_progress(train_losses, train_accuracies, output_dir):
+def plot_training_progress(train_losses, train_accuracies, output_dir, model_id):
     epochs = range(1, len(train_losses) + 1)
     plt.figure(figsize=(12, 6))
 
@@ -133,7 +133,7 @@ def plot_training_progress(train_losses, train_accuracies, output_dir):
     # Save plots in the current directory
     os.makedirs(output_dir, exist_ok=True)
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "training_progress.png"))
+    plt.savefig(os.path.join(output_dir, f"training_progress_{model_id}.png"))
     plt.close()
 
 def main(args):
@@ -165,7 +165,7 @@ def main(args):
     
     # Setup logging
     logs_folder = os.path.join(script_dir, "logs", test_dir_name)
-    log_file = os.path.join(logs_folder, "training.log")
+    log_file = os.path.join(logs_folder, f"training_{args.model_id}.log")
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(message)s')
     logging.getLogger().addHandler(logging.StreamHandler())  # Console output as well
@@ -243,7 +243,7 @@ def main(args):
                 print(f"Best model updated and saved at {checkpoint_path}")
 
         # Plot training progress in current directory
-        plot_training_progress(train_losses, train_accuracies, os.path.join(logs_folder, "plots"))
+        plot_training_progress(train_losses, train_accuracies, os.path.join(logs_folder, "plots"), args.model_id)
 
     if not args.test_path is None:
         print("Predicting")
