@@ -24,7 +24,7 @@ def add_zeros(data):
 import torch
 import torch.nn.functional as F
 # {0: 0.12101063829787234,  1: 0.17039007092198583, 2: 0.2931737588652482, 3: 0.17553191489361702, 4: 0.17411347517730497, 5: 0.06578014184397163}
-class_probs = torch.tensor([0.13, 0.17, 0.3, 0.17, 0.18, 0.05])
+class_probs = torch.tensor([0.15, 0.16, 0.25, 0.16, 0.16, 0.12])
 inv_freq = 1.0 / class_probs
 weights = inv_freq / inv_freq.sum()
 

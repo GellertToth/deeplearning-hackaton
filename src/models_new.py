@@ -61,7 +61,7 @@ class VGAE(nn.Module):
         return z, mu, logvar, class_logits
     
 
-    def gce_loss(self, logits, targets, q=0.6, weights=None):
+    def gce_loss(self, logits, targets, q=0.7, weights=None):
         probs = F.softmax(logits, dim=1)
         targets_one_hot = F.one_hot(targets, num_classes=6).float()
         pt = (probs * targets_one_hot).sum(dim=1)
