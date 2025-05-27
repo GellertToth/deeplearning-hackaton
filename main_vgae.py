@@ -223,8 +223,8 @@ def main(args):
         scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs-warmup_epochs, eta_min=minimum_lr)
         # If train_path is provided, train the model
         if not args.pretrained_path is None:
-            model.load_state_dict(torch.load(args.pretrained_path))
-            
+            model.load_state_dict(torch.load(args.pretrained_path, map_location=device))
+
         if args.pretraining:
             train_graphs, val_graphs = load_data(args.train_path, round=0, n_folds=args.n_folds, train_folds_to_use=args.train_folds_to_use, test_size=0.2)
         else:
@@ -302,7 +302,7 @@ def main(args):
         for path in model_paths:
             print(f"Loading model from {path}")
             model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=hidden_dim, latent_dim=emb_dim, num_classes=6).to(device)
-            model.load_state_dict(torch.load(path))
+            model.load_state_dict(torch.load(path, map_location=device))
 
             _, f1, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
             model = ModelWithTemperature(model)
