@@ -196,9 +196,6 @@ def main(args):
 
     device = f"cuda:{args.device}"
     print(f"Using device {device}")
-    model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=hidden_dim, latent_dim=emb_dim, num_classes=6).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=target_lr)
-    scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs-warmup_epochs, eta_min=minimum_lr)
 
     # Identify dataset folder (A, B, C, or D)
     if args.pretraining:
@@ -219,11 +216,15 @@ def main(args):
     checkpoints_folder = os.path.join(script_dir, "checkpoints", test_dir_name)
     os.makedirs(checkpoints_folder, exist_ok=True)
 
-    # If train_path is provided, train the model
-    if not args.pretrained_path is None:
-        model.load_state_dict(torch.load(args.pretrained_path))
 
     if args.train_path and args.models is None:
+        model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=hidden_dim, latent_dim=emb_dim, num_classes=6).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=target_lr)
+        scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs-warmup_epochs, eta_min=minimum_lr)
+        # If train_path is provided, train the model
+        if not args.pretrained_path is None:
+            model.load_state_dict(torch.load(args.pretrained_path))
+            
         if args.pretraining:
             train_graphs, val_graphs = load_data(args.train_path, round=0, n_folds=args.n_folds, train_folds_to_use=args.train_folds_to_use, test_size=0.2)
         else:
