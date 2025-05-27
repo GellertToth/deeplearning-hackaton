@@ -151,8 +151,8 @@ def main(args):
     batch_size = 32
     num_checkpoints = 5
 
-    device = "cuda:0"
-
+    device = f"cuda:{args.device}"
+    print(f"Using device {device}")
     model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=hidden_dim, latent_dim=emb_dim, num_classes=6).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=target_lr)
     scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs-warmup_epochs, eta_min=minimum_lr)
@@ -279,8 +279,8 @@ if __name__ == "__main__":
     parser.add_argument("--model_id", type=str, help="Model id to enable training more than one mode", default="model0")
     parser.add_argument("--n_folds", type=int, help="Number of folds", default=3)
     parser.add_argument("--train_folds_to_use", type=int, help="Train folds to use together", default=1)
-
     parser.add_argument("--models", type=str, help="Models to use for prediction")
+    parser.add_argument("--device", type=int, default=0, help="GPU device to use")
     args = parser.parse_args()
     main(args)
 
