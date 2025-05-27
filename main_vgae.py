@@ -35,7 +35,7 @@ def train(data_loader, model, optimizer, device, save_checkpoints, checkpoint_pa
         data = data.to(device)
         optimizer.zero_grad()
         z, mu, logvar, class_logits = model(data)
-        loss = model.loss(z, mu, logvar, class_logits, data, weights=weights)
+        loss = model.loss(z, mu, logvar, class_logits, data, weights=weights.to(device))
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
