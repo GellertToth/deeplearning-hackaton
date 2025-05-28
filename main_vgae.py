@@ -13,6 +13,7 @@ from src.models_new import VGAE
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import hashlib
 from sklearn.metrics import f1_score
+import final_models
 
 def string_to_int(s):
     return int(hashlib.md5(s.encode()).hexdigest(), 16) % (1_000_000_007)
@@ -216,7 +217,7 @@ def main(args):
     os.makedirs(checkpoints_folder, exist_ok=True)
 
 
-    if args.train_path and args.models is None:
+    if args.train_path:
         model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=hidden_dim, latent_dim=emb_dim, num_classes=6).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=target_lr)
         scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs-warmup_epochs, eta_min=minimum_lr)
@@ -290,7 +291,7 @@ def main(args):
 
     if not args.test_path is None:
         print("Predicting")
-        model_paths = args.models.split(" ")
+        model_paths = final_models.final_models[test_dir_name]
         models = []
         weights = []
         for path in model_paths:
@@ -300,7 +301,6 @@ def main(args):
             def get_f1_score(model_name):
                 return float(model_name.split("_")[-2])
             f1 = get_f1_score(path)
-
             weights.append(f1)
             models.append(model)
 
@@ -322,7 +322,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_id", type=str, help="Model id to enable training more than one mode", default="model0")
     parser.add_argument("--n_folds", type=int, help="Number of folds", default=3)
     parser.add_argument("--train_folds_to_use", type=int, help="Train folds to use together", default=1)
-    parser.add_argument("--models", type=str, help="Models to use for prediction")
     parser.add_argument("--device", type=int, default=0, help="GPU device to use")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
 
