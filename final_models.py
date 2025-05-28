@@ -25,8 +25,11 @@ final_models = {
 
     ],
     "D": [
-        "./checkpoints/model_D_round_9_f1_0.7486_best.pth",
-        "./checkpoints/model_D_round_10_f1_0.7647_best.pth",
+        # "./checkpoints/model_D_round_9_f1_0.7486_best.pth",
+        # "./checkpoints/model_D_round_10_f1_0.7647_best.pth",
+        "./checkpoints/model_D_round_20_f1_0.7706_best.pth",
+        "./checkpoints/model_D_round_21_f1_0.7694_best.pth",
+        "./checkpoints/model_D_round_22_f1_0.7593_best.pth",
 
     ]
 }
