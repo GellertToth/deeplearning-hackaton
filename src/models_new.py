@@ -13,7 +13,7 @@ class VGAE_MessagePassing(nn.Module):
 
         self.mu_layer = torch.nn.Linear(hidden_dim, latent_dim)
         self.logvar_layer = torch.nn.Linear(hidden_dim, latent_dim)
-        self.dropout = torch.nn.Dropout(0.1)
+        self.dropout = torch.nn.Dropout(0.2)
 
     def forward(self, x, edge_index, edge_attr):
         x = F.leaky_relu(self.conv1(x, edge_index, edge_attr), 0.1)
@@ -56,7 +56,8 @@ class VGAE(nn.Module):
         mu, logvar = self.encoder(x, edge_index, edge_attr)
         if not inference:
             z = self.reparameterize(mu, logvar)
-        
+        else:
+            z = mu
         # Graph-level embedding via mean pooling of latent node embeddings
         graph_emb = global_mean_pool(z, batch)
         class_logits= self.classifier(graph_emb)
