@@ -180,8 +180,8 @@ class ModelWithTemperature(nn.Module):
 
 
 def main(args):
-    print(string_to_int(args.model_id))
-    set_seed(string_to_int(args.model_id))
+    seed = string_to_int(args.model_id)
+    set_seed(seed)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     hidden_dim = 128
     emb_dim = 16
@@ -212,7 +212,6 @@ def main(args):
 
 
     # Define checkpoint path relative to the script's directory
-    checkpoint_path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_{args.model_id}_best.pth")
     checkpoints_folder = os.path.join(script_dir, "checkpoints", test_dir_name)
     os.makedirs(checkpoints_folder, exist_ok=True)
 
@@ -224,11 +223,10 @@ def main(args):
         # If train_path is provided, train the model
         if not args.pretrained_path is None:
             model.load_state_dict(torch.load(args.pretrained_path, map_location=device))
-
         if args.pretraining:
-            train_graphs, val_graphs = load_data(args.train_path, round=0, n_folds=args.n_folds, train_folds_to_use=args.train_folds_to_use, test_size=0.2)
+            train_graphs, val_graphs = load_data(args.train_path, round=0, n_folds=args.n_folds, train_folds_to_use=args.train_folds_to_use, test_size=0.2, seed=seed)
         else:
-            train_graphs, val_graphs = load_data(args.train_path, round=0, n_folds=1, train_folds_to_use=1, test_size=0.2)
+            train_graphs, val_graphs = load_data(args.train_path, round=0, n_folds=1, train_folds_to_use=1, test_size=0.2, seed=seed)
         train_dataset = PreloadedGraphDataset(train_graphs, transform=add_zeros)
         val_dataset = PreloadedGraphDataset(val_graphs, transform=add_zeros)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -270,7 +268,7 @@ def main(args):
             train_loss = train(
                 train_loader, model, optimizer, device,
                 save_checkpoints=(epoch + 1 in checkpoint_intervals),
-                checkpoint_path=os.path.join(checkpoints_folder, f"model_{test_dir_name}_{args.model_id}"),
+                checkpoint_path=os.path.join(checkpoints_folder, f"model_{test_dir_name}_round_{args.model_id}"),
                 current_epoch=epoch
             )
             train_acc, f1, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
@@ -283,8 +281,9 @@ def main(args):
             # Save best model
             if f1 > best_f1:
                 best_f1 = f1
-                torch.save(model.state_dict(), checkpoint_path)
-                print(f"Best model updated and saved at {checkpoint_path}")
+                path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_round_{args.model_id}_f1_{f1}_best.pth")
+                torch.save(model.state_dict(), path)
+                print(f"Best model updated and saved at {path}")
 
         # Plot training progress in current directory
         plot_training_progress(train_losses, train_accuracies, os.path.join(logs_folder, "plots"), args.model_id)
