@@ -253,7 +253,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train and evaluate GNN models on graph datasets.")
     parser.add_argument("--train_path", type=str, help="Path to the training dataset (optional).")
-    parser.add_argument("--test_path", type=str, help="Path to the test dataset.")
+    parser.add_argument("--test_path", type=str, required=True, help="Path to the test dataset.")
 
     parser.add_argument("--device", type=int, default=0, help="GPU device to use")
     parser.add_argument("--num_checkpoints", type=int, default=5, help="Number of checkpoints")
@@ -265,26 +265,12 @@ if __name__ == "__main__":
     parser.add_argument("--emb_dim", type=int, default=64, help="Embedding dimension")
     parser.add_argument("--num_layer", type=int, default=3, help="Number of layers")
 
-    parser.add_argument("--epochs", type=int, default=2, help="Number of epochs")
-    parser.add_argument("--warmup_epochs", type=int, default=1, help="Number of warmup epochs")
+    parser.add_argument("--epochs", type=int, default=250, help="Number of epochs")
+    parser.add_argument("--warmup_epochs", type=int, default=20, help="Number of warmup epochs")
 
     parser.add_argument("--noise_prob", type=float, default=0.2, help="Noise prob")
 
-    parser.add_argument("--num_voters", type=int, default=2, help="Number of voters to train")
+    parser.add_argument("--num_voters", type=int, default=3, help="Number of voters to train")
 
     args = parser.parse_args()
     main(args)
-
-
-
-def get_arguments():    
-
-    
-    # args['noise_prob'] = get_user_input("Noise probability p (used if baseline_mode=2)", default=0.2, type_cast=float)
-    args['noise_prob'] = 0.2
-
-    args["num_voters"] = 2
-
-
-    
-    return argparse.Namespace(**args)
