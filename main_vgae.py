@@ -281,7 +281,7 @@ def main(args):
             # Save best model
             if f1 > best_f1:
                 best_f1 = f1
-                path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_round_{args.model_id}_f1_{f1}_best.pth")
+                path = os.path.join(script_dir, "checkpoints", f"model_{test_dir_name}_round_{args.model_id}_f1_{f1:.4f}_best.pth")
                 torch.save(model.state_dict(), path)
                 print(f"Best model updated and saved at {path}")
 
@@ -290,31 +290,23 @@ def main(args):
 
     if not args.test_path is None:
         print("Predicting")
-        _, val_graphs = load_data(args.train_path, round=0, n_folds=1, train_folds_to_use=1, test_size=0.2)
-        val_dataset = PreloadedGraphDataset(val_graphs, transform=add_zeros)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
-        
         model_paths = args.models.split(" ")
         models = []
         weights = []
-        temps = []
         for path in model_paths:
             print(f"Loading model from {path}")
             model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=hidden_dim, latent_dim=emb_dim, num_classes=6).to(device)
             model.load_state_dict(torch.load(path, map_location=device))
-
-            _, f1, _ = evaluate(val_loader, model, device, calculate_accuracy=True)
-            model = ModelWithTemperature(model)
-            model.set_temperature(val_loader, device)
+            def get_f1_score(model_name):
+                return float(model_name.split("_")[-2])
+            f1 = get_f1_score(path)
 
             weights.append(f1)
             models.append(model)
-            temps.append(model.temperature.item())
 
         weights = torch.tensor(weights)
         weights = weights / weights.sum()
-        print(f"Temperatures were set to {temps}")
-        print(f"Model weights according to training accuracy {weights}")
+        print(f"Model weights according to val f1 {weights}")
         test_dataset = GraphDataset(args.test_path, transform=add_zeros)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
