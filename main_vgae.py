@@ -36,7 +36,7 @@ def train(data_loader, model, optimizer, device, save_checkpoints, checkpoint_pa
         data = data.to(device)
         optimizer.zero_grad()
         z, mu, logvar, class_logits = model(data)
-        loss = model.loss(z, mu, logvar, class_logits, data, weights=weights.to(device))
+        loss = model.loss(z, mu, logvar, class_logits, data)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -58,7 +58,7 @@ def evaluate(data_loader, model, device, calculate_accuracy=False):
     with torch.no_grad():
         for data in tqdm(data_loader, desc="Iterating eval graphs", unit="batch"):
             data = data.to(device)
-            _, _, _, output = model(data)
+            _, _, _, output = model(data, inference=True)
             pred = output.argmax(dim=1)
             p_dist += F.one_hot(pred, num_classes=6).float().cpu().mean(dim=0)
             predictions.extend(pred.cpu().numpy())
@@ -85,7 +85,7 @@ def evaluate_models(data_loader, models, weights, device, calculate_accuracy=Fal
     with torch.no_grad():
         for data in tqdm(data_loader, desc="Iterating eval graphs", unit="batch"):
             data = data.to(device)
-            preds = (torch.stack([model(data)[3] for model in models], dim=0) * weights).sum(dim=0)
+            preds = (torch.stack([model(data, inference=True)[3] for model in models], dim=0) * weights).sum(dim=0)
             pred = preds.argmax(dim=1)
             p_dist += F.one_hot(pred, num_classes=6).float().cpu().mean(dim=0)
             predictions.extend(pred.cpu().numpy())
@@ -191,7 +191,7 @@ def main(args):
     target_lr = 2.5 * 1e-4
     minimum_lr = 1e-6
     
-    num_epochs = 70
+    num_epochs = 200
     batch_size = args.batch_size
     num_checkpoints = 5
 
