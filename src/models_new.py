@@ -13,11 +13,13 @@ class VGAE_MessagePassing(nn.Module):
 
         self.mu_layer = torch.nn.Linear(hidden_dim, latent_dim)
         self.logvar_layer = torch.nn.Linear(hidden_dim, latent_dim)
+        self.dropout = torch.nn.Dropout(0.1)
 
     def forward(self, x, edge_index, edge_attr):
-        x = F.relu(self.conv1(x, edge_index, edge_attr))
-        x = F.relu(self.conv2(x, edge_index, edge_attr))
-
+        x = F.leaky_relu(self.conv1(x, edge_index, edge_attr), 0.1)
+        x = self.dropout(x)
+        x = F.leaky_relu(self.conv2(x, edge_index, edge_attr), 0.1)
+        x = self.dropout(x)
         mu = self.mu_layer(x)
         logvar = self.logvar_layer(x)
         return mu, logvar
@@ -31,7 +33,7 @@ class VGAE(nn.Module):
 
         self.edge_attr_decoder = nn.Sequential(
             nn.Linear(latent_dim * 2, hidden_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.Linear(hidden_dim, edge_attr_dim)
         )
 
