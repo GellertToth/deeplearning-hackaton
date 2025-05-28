@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import logging
 from tqdm import tqdm
 import torch.nn as nn
-from src.models_new import VGAE
+from src.models import VGAE
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import hashlib
 from sklearn.metrics import f1_score
