@@ -260,7 +260,7 @@ def main(args):
             print(f"Current learning rate: {lr}")
 
             if args.pretraining and epoch % 10 == 0 and epoch != 0:
-                train_graphs, val_graphs = load_data(args.train_path, round=(epoch//10), n_folds=args.n_folds, train_folds_to_use=args.train_folds_to_use, test_size=0.2)
+                train_graphs, val_graphs = load_data(args.train_path, round=(epoch//10), n_folds=args.n_folds, train_folds_to_use=args.train_folds_to_use, test_size=0.2, seed=seed)
                 train_dataset = PreloadedGraphDataset(train_graphs, transform=add_zeros)
                 val_dataset = PreloadedGraphDataset(val_graphs, transform=add_zeros)
                 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
