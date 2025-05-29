@@ -249,20 +249,20 @@ def main(args):
             weights.append(weight)
 
             ensemble = EnsembleModel(models, weights, device)
-            torch.save(ensemble.state_dict(), checkpoint_path)
+            torch.save({
+                "model_cnt": len(models),
+                "model_state_dict": ensemble.state_dict()
+            }, checkpoint_path)
 
     test_dataset = GraphDataset(args.test_path, transform=add_zeros)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
-
-    model = EnsembleModel([get_model() for _ in range(args.num_voters)], [1 for _ in range(args.num_voters)], device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    state = torch.load(checkpoint_path, map_location=device)
+    model_cnt = state["model_cnt"]
+    model = EnsembleModel([get_model() for _ in range(model_cnt)], [1 for _ in range(model_cnt)], device)
+    model.load_state_dict(state["model_state_dict"])
     predictions = evaluate(test_loader, model, device, calculate_accuracy=False)
     save_predictions(predictions, args.test_path)
     
-
-        
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train and evaluate GNN models on graph datasets.")
     parser.add_argument("--train_path", type=str, help="Path to the training dataset (optional).")
