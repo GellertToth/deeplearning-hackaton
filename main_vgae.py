@@ -219,9 +219,10 @@ def main(args):
     if args.train_path:
         full_dataset = GraphDataset(args.train_path, transform=add_zeros)
 
-        pretrained_paths = ["./checkpoints/model_pretraining_round_20_f1_0.5880_best.pth",
+        pretrained_paths = [
                             "./checkpoints/model_pretraining_round_21_f1_0.6185_best.pth",
-                            "./checkpoints/model_pretraining_round_22_f1_0.6010_best.pth"]
+                            "./checkpoints/model_pretraining_round_22_f1_0.6010_best.pth",
+                            "./checkpoints/model_pretraining_round_20_f1_0.5880_best.pth"]
         models, weights = [], []
         for voter in range(args.num_voters):
             model = get_model()
