@@ -18,7 +18,7 @@ from src.loadData import GraphDataset
 from src.utils import set_seed
 from src.models import GNNEncoderDecoder, EnsembleModel,VGAE
 import argparse
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
 # Set the random seed
 set_seed()
@@ -140,10 +140,12 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
     minimum_lr = 1e-6
 
     optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
-    scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs-args.warmup_epochs, eta_min=minimum_lr)
+    scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.6, patience=10, verbose=True, min_lr=minimum_lr)
 
     num_epochs = args.epochs
     best_f1 = 0.0   
+    patience_counter = 0
+    reloaded = False
 
     train_losses = []
     train_accuracies = []
@@ -159,7 +161,6 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
         if epoch < args.warmup_epochs:
             lr = initial_lr + (target_lr - initial_lr) * (epoch / args.warmup_epochs)
         else:
-            scheduler.step()
             lr = scheduler.get_last_lr()[-1]
         return lr
 
@@ -179,19 +180,37 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
 
         val_loss,val_acc, f1 = evaluate(val_loader, model, device, calculate_accuracy=True)
 
-        print(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}")
-        logging.info(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}")
+        print(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}, Best f1: {best_f1:.4f}")
+        logging.info(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}, Best f1: {best_f1:.4f}")
         
         train_losses.append(train_loss)
         train_accuracies.append(train_acc)
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
 
-        
+        if epoch >= args.warmup_epochs:
+            scheduler.step(f1)
+
         if f1 > best_f1:
             best_f1 = f1
             torch.save(model.state_dict(), checkpoint_path)
             print(f"Best model updated and saved at {checkpoint_path}, with val f1: {best_f1:.4f}")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+
+        if patience_counter == args.patience and reloaded:
+            print("Patience reached twice, early stopping")
+            logging.info("Patience reached twice, early stopping")
+            break
+        if patience_counter == args.patience:
+            print("Patience reached reloading best model")
+            logging.info("Patience reached reloading best model")
+            model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+
+            patience_counter = 0
+            reloaded = True
+
     model.load_state_dict(torch.load(checkpoint_path))
     plot_training_progress(train_losses, train_accuracies, os.path.join(logs_folder, f"plots_voter_{voter}"))
     plot_training_progress(val_losses, val_accuracies, os.path.join(logs_folder, f"plotsVal_voter_{voter}"))
@@ -257,7 +276,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("-gnn", type=str, default="gin")
-    parser.add_argument("--drop_ratio", type=float, default=0.4, help="Drop ratio")
+    parser.add_argument("--drop_ratio", type=float, default=0.5, help="Drop ratio")
 
     parser.add_argument("--emb_dim", type=int, default=128, help="Embedding dimension")
     parser.add_argument("--epochs", type=int, default=200, help="Number of epochs")
@@ -265,6 +284,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--noise_prob", type=float, default=0.2, help="Noise prob")
     parser.add_argument("--num_voters", type=int, default=5, help="Number of voters to train")
+
+    parser.add_argument("--patience", type=int, default=40, help="Number of rounds to wait for no improvement before reloading best model")
+
 
     args = parser.parse_args()
     main(args)
