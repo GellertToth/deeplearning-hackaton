@@ -162,7 +162,7 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
         return lr
 
     for epoch in range(num_epochs):
-        if epoch < args.warmup_epoch:
+        if epoch < args.warmup_epochs:
             lr = get_lr(epoch)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
