@@ -139,7 +139,7 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
     target_lr = 1e-3
     minimum_lr = 1e-6
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=target_lr)
     scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.6, patience=10, verbose=True, min_lr=minimum_lr)
 
     num_epochs = args.epochs
@@ -158,18 +158,14 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
         checkpoint_intervals = [num_epochs]
 
     def get_lr(epoch):
-        if epoch < args.warmup_epochs:
-            lr = initial_lr + (target_lr - initial_lr) * (epoch / args.warmup_epochs)
-        else:
-            lr = scheduler.get_last_lr()[-1]
+        lr = initial_lr + (target_lr - initial_lr) * (epoch / args.warmup_epochs)
         return lr
 
-
     for epoch in range(num_epochs):
-        lr = get_lr(epoch)
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-        print(f"Current learning rate: {lr}")
+        if epoch < args.warmup_epoch:
+            lr = get_lr(epoch)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
 
         train_loss, train_acc = train(
             train_loader, model, optimizer, device,
