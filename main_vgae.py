@@ -285,7 +285,7 @@ if __name__ == "__main__":
     parser.add_argument("--noise_prob", type=float, default=0.2, help="Noise prob")
     parser.add_argument("--num_voters", type=int, default=5, help="Number of voters to train")
 
-    parser.add_argument("--patience", type=int, default=40, help="Number of rounds to wait for no improvement before reloading best model")
+    parser.add_argument("--patience", type=int, default=30, help="Number of rounds to wait for no improvement before reloading best model")
 
 
     args = parser.parse_args()
