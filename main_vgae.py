@@ -239,9 +239,10 @@ def main(args):
         full_dataset = GraphDataset(args.train_path, transform=add_zeros)
 
         pretrained_paths = [
-                            "./checkpoints/model_pretraining_round_21_f1_0.6185_best.pth",
+                            "./checkpoints/model_pretraining_round_20_f1_0.5880_best.pth",
                             "./checkpoints/model_pretraining_round_22_f1_0.6010_best.pth",
-                            "./checkpoints/model_pretraining_round_20_f1_0.5880_best.pth"]
+                            "./checkpoints/model_pretraining_round_21_f1_0.6185_best.pth",
+                            ]
         models, weights = [], []
         for voter in range(args.num_voters):
             model = get_model()
@@ -250,7 +251,7 @@ def main(args):
             model, weight = train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, script_dir, device)
             models.append(model)
             weights.append(weight)
-            
+
             ensemble = EnsembleModel(models, weights, device)
             torch.save(ensemble.state_dict(), checkpoint_path)
 
@@ -272,7 +273,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_path", type=str, required=True, help="Path to the test dataset.")
 
     parser.add_argument("--device", type=int, default=0, help="GPU device to use")
-    parser.add_argument("--num_checkpoints", type=int, default=5, help="Number of checkpoints")
+    parser.add_argument("--num_checkpoints", type=int, default=7, help="Number of checkpoints")
 
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("-gnn", type=str, default="gin")
