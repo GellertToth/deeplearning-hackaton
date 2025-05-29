@@ -82,9 +82,20 @@ class CompleteModel(torch.nn.Module):
         h = self.gnn(x)
         h = F.normalize(h, p=2.0, dim=1)
         return self.classifier(h)
-    
+
+class NoisyCrossEntropyLoss(torch.nn.Module):
+    def __init__(self, p_noisy):
+        super().__init__()
+        self.p = p_noisy
+        self.ce = torch.nn.CrossEntropyLoss(reduction='none')
+
+    def forward(self, logits, targets):
+        losses = self.ce(logits, targets)
+        weights = (1 - self.p) + self.p * (1 - torch.nn.functional.one_hot(targets, num_classes=logits.size(1)).float().sum(dim=1))
+        return (losses * weights).mean()
+  
 class VGAEEncoder(nn.Module):
-    def __init__(self, in_channels, edge_attr_dim, hidden_dim, latent_dim):
+    def __init__(self, in_channels, edge_attr_dim, hidden_dim, latent_dim, drop_ratio):
         super().__init__()
         # Edge network to produce convolution weights from edge attributes        
         self.conv1 = GINConv(hidden_dim)
@@ -92,7 +103,7 @@ class VGAEEncoder(nn.Module):
 
         self.mu_layer = torch.nn.Linear(hidden_dim, latent_dim)
         self.logvar_layer = torch.nn.Linear(hidden_dim, latent_dim)
-        self.dropout = torch.nn.Dropout(0.2)
+        self.dropout = torch.nn.Dropout(drop_ratio)
 
     def forward(self, x, edge_index, edge_attr):
         x = F.leaky_relu(self.conv1(x, edge_index, edge_attr), 0.1)
@@ -104,9 +115,9 @@ class VGAEEncoder(nn.Module):
         return mu, logvar
 
 class VGAE(nn.Module):
-    def __init__(self, in_channels, edge_attr_dim, hidden_dim, latent_dim, num_classes):
+    def __init__(self, in_channels, edge_attr_dim, hidden_dim, latent_dim, num_classes, noise_prob=0.2, drop_ratio=0.2):
         super().__init__()
-        self.encoder = VGAEEncoder(in_channels, edge_attr_dim, hidden_dim, latent_dim)
+        self.encoder = VGAEEncoder(in_channels, edge_attr_dim, hidden_dim, latent_dim, drop_ratio)
         self.classifier = nn.Linear(latent_dim, num_classes)
         self.latent_dim = latent_dim
 
@@ -115,6 +126,8 @@ class VGAE(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Linear(hidden_dim, edge_attr_dim)
         )
+        self.drop = nn.Dropout(drop_ratio)
+        self.criterion = NoisyCrossEntropyLoss(p_noisy=noise_prob)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -139,6 +152,8 @@ class VGAE(nn.Module):
             z = mu
         # Graph-level embedding via mean pooling of latent node embeddings
         graph_emb = global_mean_pool(z, batch)
+        graph_emb = self.drop(graph_emb)
+        
         class_logits= self.classifier(graph_emb)
         return z, mu, logvar, class_logits
     
@@ -155,8 +170,8 @@ class VGAE(nn.Module):
         
     #     return loss.mean()
 
-    def loss(self, z, mu, logvar, class_logits, data, alpha=1, beta=0.05, gamma=0.1, delta=0.1, weights=None):
-        classification_loss = F.cross_entropy(class_logits, data.y, weight=weights)
+    def loss(self, z, mu, logvar, class_logits, data, alpha=1, beta=0.02, gamma=0.1, delta=0.1, weights=None):
+        classification_loss = self.criterion(class_logits, data.y)
 
         adj_pred, edge_attr_pred = self.decode(z, data.edge_index)
         adj_true = torch.zeros_like(adj_pred)
@@ -175,17 +190,6 @@ class VGAE(nn.Module):
         )
 
         return loss
-
-class NoisyCrossEntropyLoss(torch.nn.Module):
-    def __init__(self, p_noisy):
-        super().__init__()
-        self.p = p_noisy
-        self.ce = torch.nn.CrossEntropyLoss(reduction='none')
-
-    def forward(self, logits, targets):
-        losses = self.ce(logits, targets)
-        weights = (1 - self.p) + self.p * (1 - torch.nn.functional.one_hot(targets, num_classes=logits.size(1)).float().sum(dim=1))
-        return (losses * weights).mean()
 
 
 class GNNEncoderDecoder(torch.nn.Module):
@@ -281,7 +285,7 @@ class EnsembleModel(nn.Module):
         self.weights = (self.weights / self.weights.sum(dim=0)).to(device)
 
     def forward(self, x):
-        outputs = [model(x)[1] for model in self.models]
+        outputs = [model(x)[-1] for model in self.models]
         outputs = torch.stack(outputs)
         weighted_avg = (outputs * self.weights.view(-1, 1, 1)).sum(dim=0)
         return None, weighted_avg
