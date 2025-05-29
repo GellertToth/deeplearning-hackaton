@@ -250,9 +250,9 @@ def main(args):
             model, weight = train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, script_dir, device)
             models.append(model)
             weights.append(weight)
-        ensemble = EnsembleModel(models, weights, device)
-
-        torch.save(ensemble.state_dict(), checkpoint_path)
+            
+            ensemble = EnsembleModel(models, weights, device)
+            torch.save(ensemble.state_dict(), checkpoint_path)
 
     test_dataset = GraphDataset(args.test_path, transform=add_zeros)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
