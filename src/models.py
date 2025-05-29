@@ -285,8 +285,12 @@ class EnsembleModel(nn.Module):
         self.weights = (self.weights / self.weights.sum(dim=0)).to(device)
 
     def forward(self, x):
-        outputs = [model(x)[-1] for model in self.models]
+        outputs = [model(x) for model in self.models]
+        dim = len(outputs[0])
+        outputs = [el[-1] for el in outputs]
         outputs = torch.stack(outputs)
         weighted_avg = (outputs * self.weights.view(-1, 1, 1)).sum(dim=0)
+        if dim == 4:
+            return None, None, None, weighted_avg
         return None, weighted_avg
     
