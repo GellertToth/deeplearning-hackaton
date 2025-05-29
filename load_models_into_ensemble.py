@@ -60,9 +60,9 @@ def merge_two_ensembles():
 
 def resave_ensemble_without_cnt():
     device = "cuda:0"
-    path = "./checkpoints/model_C_best.pth"
+    path = "./checkpoints/model_A_best.pth"
     cnt = 5
-    save_to = "./checkpoints/model_C_resaved_ensemble.pth"
+    save_to = "./checkpoints/model_A_resaved_ensemble.pth"
     def get_model():
         return VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=128, latent_dim=16, num_classes=6).to(device)
 

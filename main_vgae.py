@@ -258,6 +258,7 @@ def main(args):
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
     state = torch.load(checkpoint_path, map_location=device)
     model_cnt = state["model_cnt"]
+    print(f"Ensemble contains: {model_cnt}")
     model = EnsembleModel([get_model() for _ in range(model_cnt)], [1 for _ in range(model_cnt)], device)
     model.load_state_dict(state["model_state_dict"])
     predictions = evaluate(test_loader, model, device, calculate_accuracy=False)
