@@ -5,7 +5,7 @@
 
 ## Solution architecture
 
-Our solution was inspired by: https://github.com/cminuttim/Learning-with-Noisy-Graph-Labels-Competition-IJCNN_2025/tree/main
+Our solution was inspired by: https://github.com/cminuttim/Learning-with-Noisy-Graph-Labels-Competition-IJCNN_2025
 
 ### Graph encoders
 
