@@ -1,5 +1,8 @@
 # Deeplearning Hackathon
 
+## Teaser 
+![Diagram of architecture](architecture_diagram.png)
+
 ## Solution architecture
 
 Our solution was inspired by: https://github.com/cminuttim/Learning-with-Noisy-Graph-Labels-Competition-IJCNN_2025/tree/main
@@ -46,6 +49,10 @@ We initially experimented with coteaching combined with GCELoss, but found that 
 
 We implemented the relabeling of noisy datapoints as described by Yin et. al (2023). They use contrastive loss with hard negatives to counteract noisy labels and relabel examples where the confidence is high enough. We have not managed to make the training stable as the relabeling part of the process just pushed everything into one class. Thus, we abandoned this line for the VGAE approach. Having learned from the VGAE based solution how long it takes to sufficiently train the model, we believe that our warmup and training phases between relabeling were not long enough, which lead to the complete collapse of the labels into the most popular class. 
 
+
+## Training
+
+The training was done partially locally on an RTX 4070 and also on runpod.io using RTX 4000 ADA, RTX 3090 and RTX 4090.
 
 ## Citations
 
