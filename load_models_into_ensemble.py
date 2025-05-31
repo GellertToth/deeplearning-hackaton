@@ -73,6 +73,30 @@ def resave_ensemble_without_cnt():
         "model_state_dict": model.state_dict()
     }, save_to)
 
+def reconstruct_lost_ensemble():
+    s = "B"
+    cnt = 9
+    paths = [
+        f"checkpoints/model_{s}_voter_{i}_best.pth" for i in range(cnt)
+    ]
+    
+    device = "cuda:0"
+    def get_model():
+        return VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=128, latent_dim=16, num_classes=6).to(device)
+    
+    models = []
+    for path in paths:
+        model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=128, latent_dim=16, num_classes=6).to(device)
+        model.load_state_dict(torch.load(path, map_location=device))
+        models.append(model)
+    # weights = [0.8461, 0.8363, 0.8416, 0.8523, 0.8463, 0.8491, 0.8431, 0.8342, 0.8437]
+    weights = [0.5563, 0.5725, 0.5484, 0.5592, 0.5382, 0.5318, 0.5916, 0.5405, 0.5634]
+    ensemble = EnsembleModel(models, weights, device)
+    torch.save({
+        "model_cnt": cnt,
+        "model_state_dict": ensemble.state_dict()
+    }, f"checkpoints/model_{s}_best.pth")
+
 
 if __name__ == "__main__":
-    resave_ensemble_without_cnt()
+    reconstruct_lost_ensemble()
