@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath('./'))
 
 from src.loadData import GraphDataset
 from src.utils import set_seed
-from src.models import GNNEncoderDecoder, EnsembleModel
+from src.models import EnsembleModel,VGAE
 import argparse
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
@@ -36,8 +36,8 @@ def train(data_loader, model, optimizer, device, save_checkpoints, checkpoint_pa
     for data in tqdm(data_loader, desc="Iterating training graphs", unit="batch"):
         data = data.to(device)
         optimizer.zero_grad()
-        node_emb, output = model(data)
-        loss = model.loss(node_emb, output, data)
+        z, mu, logvar, output = model(data)
+        loss = model.loss(z, mu, logvar, output, data)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -65,7 +65,7 @@ def evaluate(data_loader, model, device, calculate_accuracy=False):
     with torch.no_grad():
         for data in tqdm(data_loader, desc="Iterating eval graphs", unit="batch"):
             data = data.to(device)
-            node_emb, output = model(data)
+            _, _, _, output = model(data)
             pred = output.argmax(dim=1)
             predictions.extend(pred.cpu().numpy())
             
@@ -139,7 +139,7 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
     target_lr = 1e-3
     minimum_lr = 1e-6
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=initial_lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=target_lr)
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs-args.warmup_epochs, eta_min=minimum_lr)
 
     num_epochs = args.epochs
@@ -179,19 +179,19 @@ def train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, scr
 
         val_loss,val_acc, f1 = evaluate(val_loader, model, device, calculate_accuracy=True)
 
-        print(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}")
-        logging.info(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}")
+        print(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}, Best f1: {best_f1:.4f}")
+        logging.info(f"Voter {voter}, Epoch {epoch + 1}/{num_epochs}, Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Val f1: {f1:.4f}, Best f1: {best_f1:.4f}")
         
         train_losses.append(train_loss)
         train_accuracies.append(train_acc)
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
 
-        
         if f1 > best_f1:
             best_f1 = f1
             torch.save(model.state_dict(), checkpoint_path)
-            print(f"Best model updated and saved at {checkpoint_path}")
+            print(f"Best model updated and saved at {checkpoint_path}, with val f1: {best_f1:.4f}")
+
     model.load_state_dict(torch.load(checkpoint_path))
     plot_training_progress(train_losses, train_accuracies, os.path.join(logs_folder, f"plots_voter_{voter}"))
     plot_training_progress(val_losses, val_accuracies, os.path.join(logs_folder, f"plotsVal_voter_{voter}"))
@@ -204,18 +204,8 @@ def main(args):
     device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
 
     def get_model():
-        if args.gnn == 'gin':
-            model = GNNEncoderDecoder(gnn_type='gin', num_class=6, num_layer=args.num_layer, emb_dim=args.emb_dim, drop_ratio=args.drop_ratio, virtual_node=False, noise_prob=args.noise_prob).to(device)
-        elif args.gnn == 'gin-virtual':
-            model = GNNEncoderDecoder(gnn_type='gin', num_class=6, num_layer=args.num_layer, emb_dim=args.emb_dim, drop_ratio=args.drop_ratio, virtual_node=True, noise_prob=args.noise_prob).to(device)
-        elif args.gnn == 'gcn':
-            model = GNNEncoderDecoder(gnn_type='gcn', num_class=6, num_layer=args.num_layer, emb_dim=args.emb_dim, drop_ratio=args.drop_ratio, virtual_node=False, noise_prob=args.noise_prob).to(device)
-        elif args.gnn == 'gcn-virtual':
-            model = GNNEncoderDecoder(gnn_type='gcn', num_class=6, num_layer=args.num_layer, emb_dim=args.emb_dim, drop_ratio=args.drop_ratio, virtual_node=True, noise_prob=args.noise_prob).to(device)
-        else:
-            raise ValueError('Invalid GNN type')
+        model = VGAE(in_channels=1, edge_attr_dim=7, hidden_dim=args.emb_dim, latent_dim=16, num_classes=6, noise_prob=args.noise_prob, drop_ratio=args.drop_ratio).to(device)
         return model
-
     test_dir_name = os.path.basename(os.path.dirname(args.test_path))
     logs_folder = os.path.join(script_dir, "logs", test_dir_name)
     log_file = os.path.join(logs_folder, f"training.log")
@@ -229,48 +219,57 @@ def main(args):
     if args.train_path:
         full_dataset = GraphDataset(args.train_path, transform=add_zeros)
 
+        pretrained_paths = [
+                            "./checkpoints/model_pretraining_round_20_f1_0.5880_best.pth",
+                            "./checkpoints/model_pretraining_round_22_f1_0.6010_best.pth",
+                            "./checkpoints/model_pretraining_round_21_f1_0.6185_best.pth",
+                            ]
         models, weights = [], []
         for voter in range(args.num_voters):
-            model, weight = train_once(get_model(), args, voter, full_dataset, test_dir_name, logs_folder, script_dir, device)
+            model = get_model()
+            model.load_state_dict(torch.load(pretrained_paths[voter%len(pretrained_paths)], map_location=device))
+
+            model, weight = train_once(model, args, voter, full_dataset, test_dir_name, logs_folder, script_dir, device)
             models.append(model)
             weights.append(weight)
-        ensemble = EnsembleModel(models, weights, device)
 
-        torch.save(ensemble.state_dict(), checkpoint_path)
+            ensemble = EnsembleModel(models, weights, device)
+            torch.save({
+                "model_cnt": len(models),
+                "model_state_dict": ensemble.state_dict()
+            }, checkpoint_path)
 
     test_dataset = GraphDataset(args.test_path, transform=add_zeros)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
-
-    model = EnsembleModel([get_model() for _ in range(args.num_voters)], [1 for _ in range(args.num_voters)], device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    state = torch.load(checkpoint_path, map_location=device)
+    model_cnt = state["model_cnt"]
+    print(f"Ensemble contains: {model_cnt}")
+    model = EnsembleModel([get_model() for _ in range(model_cnt)], [1 for _ in range(model_cnt)], device)
+    model.load_state_dict(state["model_state_dict"])
     predictions = evaluate(test_loader, model, device, calculate_accuracy=False)
     save_predictions(predictions, args.test_path)
     
-
-        
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train and evaluate GNN models on graph datasets.")
     parser.add_argument("--train_path", type=str, help="Path to the training dataset (optional).")
     parser.add_argument("--test_path", type=str, required=True, help="Path to the test dataset.")
 
     parser.add_argument("--device", type=int, default=0, help="GPU device to use")
-    parser.add_argument("--num_checkpoints", type=int, default=5, help="Number of checkpoints")
+    parser.add_argument("--num_checkpoints", type=int, default=7, help="Number of checkpoints")
 
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("-gnn", type=str, default="gin")
-    parser.add_argument("--drop_ratio", type=float, default=0.3, help="Drop ratio")
+    parser.add_argument("--drop_ratio", type=float, default=0.5, help="Drop ratio")
 
-    parser.add_argument("--emb_dim", type=int, default=64, help="Embedding dimension")
-    parser.add_argument("--num_layer", type=int, default=3, help="Number of layers")
-
-    parser.add_argument("--epochs", type=int, default=250, help="Number of epochs")
+    parser.add_argument("--emb_dim", type=int, default=128, help="Embedding dimension")
+    parser.add_argument("--epochs", type=int, default=200, help="Number of epochs")
     parser.add_argument("--warmup_epochs", type=int, default=20, help="Number of warmup epochs")
 
     parser.add_argument("--noise_prob", type=float, default=0.2, help="Noise prob")
+    parser.add_argument("--num_voters", type=int, default=5, help="Number of voters to train")
 
-    parser.add_argument("--num_voters", type=int, default=3, help="Number of voters to train")
+    parser.add_argument("--patience", type=int, default=30, help="Number of rounds to wait for no improvement before reloading best model")
+
 
     args = parser.parse_args()
     main(args)
