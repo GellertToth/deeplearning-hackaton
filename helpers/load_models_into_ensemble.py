@@ -1,4 +1,4 @@
-from src.models import EnsembleModel, VGAE
+from source.models import EnsembleModel, VGAE
 import torch
 
 def load_old_models_into_ensemble():

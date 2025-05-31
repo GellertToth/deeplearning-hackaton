@@ -14,9 +14,9 @@ import os
 # Add the parent directory of src to the system path
 sys.path.append(os.path.abspath('./'))
 
-from src.loadData import GraphDataset
-from src.utils import set_seed
-from src.models import EnsembleModel,VGAE
+from source.loadData import GraphDataset
+from source.utils import set_seed
+from source.models import EnsembleModel,VGAE
 import argparse
 from torch.optim.lr_scheduler import CosineAnnealingLR
 

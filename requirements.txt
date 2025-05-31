@@ -1,3 +1,4 @@
+python==3.10.17
 scikit-learn==1.6.1
 torch==2.0.1
 torch-geometric==2.6.1

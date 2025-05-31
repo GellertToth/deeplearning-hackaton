@@ -39,6 +39,22 @@ From the 3 pretrained models we train 5 models for each dataset (we did not have
 
 The models predictions are then weighted by their (weighted) f1 validation scores to create the final voting. 
 
+### How to reproduce
+
+The pretraining was done on an older version of the code (and not rerun or reimplemented later on due to constraint of time), but we have restored a version of the file in order to make the training reproducible.
+
+The pretraining can be started as 
+
+python main_pretraining.py --train_path "./datasets/A/train.json.gz ./datasets/B/train.json.gz ./datasets/C/train.json.gz ./datasets/D/train.json.gz" --n_folds 8 --number_of_folds_to_use 5 --model 20
+
+We trained the models as model 20, 21 and 22. Then in the latest version of the code these pretrained models have been hardcoded to be loaded in and built upon.
+
+Then to train the models we did:
+
+python main.py --train_path ./datasets/A/train.json.gz --test_path ./datasets/A/train.json.gz --drop_ratio 0.5 --noise_prob 0.2
+
+Except for B where we did 0.6 and 0.35 as mentioned above.
+
 ## Other things we have tried
 
 ### Co-teaching

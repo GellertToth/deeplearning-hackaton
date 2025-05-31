@@ -6,10 +6,10 @@ import torch.nn.functional as F
 from torch_geometric.nn.inits import uniform
 import torch.nn as nn
 from torch_geometric.nn import NNConv, global_mean_pool
-from src.conv import GINConv
+from source.conv import GINConv
 
 
-from src.conv import GNN_node, GNN_node_Virtualnode
+from source.conv import GNN_node, GNN_node_Virtualnode
 
 class GNN(torch.nn.Module):
 

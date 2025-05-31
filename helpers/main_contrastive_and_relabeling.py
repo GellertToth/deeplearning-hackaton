@@ -3,15 +3,15 @@ import argparse
 import os
 import torch
 from torch_geometric.loader import DataLoader
-from src.loadData import GraphDataset
-from src.utils import set_seed
+from source.loadData import GraphDataset
+from source.utils import set_seed
 import pandas as pd
 import matplotlib.pyplot as plt
 import logging
 from tqdm import tqdm
 from torch.cuda.amp import autocast, GradScaler
 import torch.nn as nn
-from src.models import GNN, MLP, CompleteModel
+from source.models import GNN, MLP, CompleteModel
 
 # Set the random seed
 set_seed()
