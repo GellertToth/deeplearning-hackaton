@@ -9,7 +9,7 @@ Our solution was inspired by: https://github.com/cminuttim/Learning-with-Noisy-G
 
 ### Graph encoders
 
-In order to add unsupervised parts to our loss function, which would not depend on the noisy labels and hopefully help reduce the effecto of noise, we used a graph encoder. Namely a VGAE. This enabled us to add 3 new terms to our loss: edge label reconstruction loss, edge predictin loss and KL divergence. 
+In order to add unsupervised parts to our loss function, which would not depend on the noisy labels and hopefully help reduce the effecto of noise, we used a graph encoder, namely a VGAE. This enabled us to add 3 new terms to our loss: edge label reconstruction loss, edge predictin loss and KL divergence. 
 
 The encoder part is made up of two layers of GIN Convolutions provided in the baseline code. We apply dropout (see later) and leakyRelu with p=0.1 between and after the convolutions. The embedding size was set to 128. Then a linear layer is used to map the embedding to the latent dimension of 16 for both the mean of the distribution and for the variance. 
 
@@ -47,7 +47,7 @@ We initially experimented with coteaching combined with GCELoss, but found that 
 
 ### Contrastive loss and relabeling
 
-We implemented the relabeling of noisy datapoints as described by Yin et. al (2023). They use contrastive loss with hard negatives to counteract noisy labels and relabel examples where the confidence is high enough. We have not managed to make the training stable as the relabeling part of the process just pushed everything into one class. Thus, we abandoned this line for the VGAE approach. Having learned from the VGAE based solution how long it takes to sufficiently train the model, we believe that our warmup and training phases between relabeling were not long enough, which lead to the complete collapse of the labels into the most popular class. 
+We implemented the relabeling of noisy datapoints as described by Yin et al (2023). They use contrastive loss with hard negatives to counteract noisy labels and relabel examples where the confidence is high enough. We have not managed to make the training stable as the relabeling part of the process just pushed everything into one class. Thus, we abandoned this line for the VGAE approach. Having learned from the VGAE based solution how long it takes to sufficiently train the model, we believe that our warmup and training phases between relabeling were not long enough, which lead to the complete collapse of the labels into the most popular class. 
 
 
 ## Training
